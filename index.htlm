@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise PESTEL 2026 - Cooabriel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Cooabriel Brand (Dark Green, Gold, Neutrals) -->
+    <!-- Application Structure Plan: A arquitetura é um painel de controle (dashboard) com 6 cartões, um para cada fator PESTEL. A principal interatividade é um filtro no topo ("Todos", "Oportunidades", "Ameaças") que atualiza dinamicamente o conteúdo de todos os 6 cartões. Esta estrutura foi escolhida em vez de um relatório linear porque permite ao usuário segmentar instantaneamente a análise por *impacto* (positivo vs. negativo), o que é mais acionável para o planejamento estratégico. Um gráfico de rosca de resumo fornece contexto imediato de alto nível sobre o equilíbrio geral de oportunidades e ameaças. -->
+    <!-- Visualization & Content Choices: 1. [Relatório PESTEL (Texto)] -> [Objetivo: Organizar e Filtrar] -> [Método: Grade de Cartões HTML] -> [Interação: Filtros JS (Oportunidade/Ameaça)] -> [Justificativa: Permite visão estratégica e acionável]. 2. [Contagem de Oportunidades/Ameaças] -> [Objetivo: Informar (Resumo)] -> [Método: Gráfico de Rosca (Chart.js)] -> [Interação: Estático (Contextual)] -> [Justificativa: Resumo "em um piscar de olhos" do cenário]. -> [CONFIRMAÇÃO: Nenhum SVG/Mermaid utilizado.] -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff;
+            color: #4d4d4d;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Sora', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        .filter-btn {
+            transition: all 0.3s ease;
+        }
+        .filter-btn.active {
+            /* No transform, just color change */
+        }
+        .pestel-item {
+            transition: opacity 0.3s ease, max-height 0.3s ease, transform 0.3s ease;
+            opacity: 1;
+            max-height: 100px;
+            transform: scaleY(1);
+            transform-origin: top;
+            overflow: hidden;
+        }
+        .pestel-item.hidden {
+            opacity: 0;
+            max-height: 0;
+            transform: scaleY(0);
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+        .modal.hidden {
+            display: none;
+        }
+        .spinner-wrapper.hidden {
+            display: none;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #ffb81c; /* Cooabriel Gold */
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .prose {
+            color: #4d4d4d;
+            line-height: 1.65;
+        }
+        .prose strong {
+            font-weight: 700;
+            color: #004e38; /* Cooabriel Green */
+        }
+        .prose ul {
+            padding-left: 1.25rem;
+            list-style-type: disc;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose li {
+            margin-top: 0.25rem;
+        }
+        .prose-sm {
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-800">
+
+    <header class="text-center py-12 px-4">
+        <h1 class="text-4xl md:text-5xl font-bold text-[#004e38] mb-4">Análise PESTEL 2026</h1>
+        <p class="text-xl text-gray-600 max-w-3xl mx-auto">Uma análise interativa do macroambiente projetado para a Cooperativa <span class="font-semibold">Cooabriel</span>, com foco no mercado brasileiro.</p>
+    </header>
+
+    <main class="container mx-auto px-4 pb-16">
+
+        <section id="summary" class="mb-12 md:mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Resumo do Cenário 2026</h2>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-8">
+                A análise PESTEL identifica os principais vetores de mudança. O gráfico abaixo resume o equilíbrio entre oportunidades (fatores positivos que podem ser explorados) e ameaças (fatores negativos que exigem mitigação) identificados para 2026.
+            </p>
+            <div class="chart-container">
+                <canvas id="summaryChart"></canvas>
+            </div>
+        </section>
+
+        <section id="interactive-analysis" class="w-full max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-4">Análise Detalhada dos Fatores</h2>
+            <p class="text-center text-gray-600 max-w-2xl mx-auto mb-10">
+                Use os filtros abaixo para explorar os diferentes fatores da análise. Você pode optar por ver todos os pontos, ou focar apenas nas oportunidades ou ameaças para o planejamento estratégico.
+            </p>
+
+            <div class="mb-10 text-center">
+                <button id="generate-summary-btn" class="filter-btn font-semibold py-3 px-8 rounded-md bg-[#004e38] text-white shadow-md hover:bg-[#00744b] active:shadow-none flex items-center justify-center gap-2 mx-auto">
+                    ✨ Gerar Resumo Executivo Estratégico
+                </button>
+            </div>
+
+            <div id="filters" class="mb-10 flex flex-wrap justify-center gap-4">
+                <button data-filter="todos" class="filter-btn active font-semibold py-3 px-6 rounded-md bg-[#004e38] text-white shadow-md">
+                    Ver Todos
+                </button>
+                <button data-filter="oportunidade" class="filter-btn font-semibold py-3 px-6 rounded-md bg-white text-green-700 border border-green-700 shadow-md">
+                    Apenas Oportunidades
+                </button>
+                <button data-filter="ameaca" class="filter-btn font-semibold py-3 px-6 rounded-md bg-white text-red-700 border border-red-700 shadow-md">
+                    Apenas Ameaças
+                </button>
+            </div>
+
+            <div id="pestel-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                <!-- Político -->
+                <div class="pestel-card bg-white p-6 rounded-md shadow-md border-t-4 border-[#ffb81c]">
+                    <h3 class="text-2xl font-bold mb-5 flex items-center gap-3"><span class="text-3xl">🏛️</span> P - Fatores Políticos</h3>
+                    <ul class="space-y-4">
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Continuidade de políticas de fomento ao agronegócio, com linhas de crédito robustas (Plano Safra).
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Incertezas e complexidade na implementação da Reforma Tributária, podendo impactar a carga fiscal.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Instabilidade política residual pós-ciclos eleitorais, afetando a confiança do investidor e o câmbio.
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="gemini-card-btn mt-4 w-full text-sm font-semibold py-2 px-4 rounded-md bg-[#004e38] text-white hover:bg-[#00744b] transition-all flex items-center justify-center gap-2">
+                        ✨ Gerar Recomendações
+                    </button>
+                    <div class="gemini-result-wrapper hidden mt-4">
+                      <div class="spinner-wrapper flex justify-center items-center h-24">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600 text-sm">Gerando...</p>
+                      </div>
+                      <div class="gemini-result prose prose-sm max-w-none p-4 bg-gray-50 rounded-md"></div>
+                    </div>
+                </div>
+
+                <!-- Econômico -->
+                <div class="pestel-card bg-white p-6 rounded-md shadow-md border-t-4 border-[#ffb81c]">
+                    <h3 class="text-2xl font-bold mb-5 flex items-center gap-3"><span class="text-3xl">💰</span> E - Fatores Econômicos</h3>
+                    <ul class="space-y-4">
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Volatilidade do câmbio (BRL/USD), impactando diretamente o custo de insumos importados (fertilizantes, defensivos).
+                            </div>
+                        </li>
+                         <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Volatilidade dos preços das commodities de café no mercado internacional, afetando a rentabilidade.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-emerald-500 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-emerald-700">Oportunidade:</strong> Taxas de juros (Selic) mais estabilizadas em patamares que facilitam o crédito para investimento dos cooperados.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-emerald-500 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-emerald-700">Oportunidade:</strong> Crescimento do consumo interno de cafés de maior qualidade (especiais), incluindo o Conilon de origem controlada.
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="gemini-card-btn mt-4 w-full text-sm font-semibold py-2 px-4 rounded-md bg-[#004e38] text-white hover:bg-[#00744b] transition-all flex items-center justify-center gap-2">
+                        ✨ Gerar Recomendações
+                    </button>
+                    <div class="gemini-result-wrapper hidden mt-4">
+                      <div class="spinner-wrapper flex justify-center items-center h-24">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600 text-sm">Gerando...</p>
+                      </div>
+                      <div class="gemini-result prose prose-sm max-w-none p-4 bg-gray-50 rounded-md"></div>
+                    </div>
+                </div>
+
+                <!-- Sociocultural -->
+                <div class="pestel-card bg-white p-6 rounded-md shadow-md border-t-4 border-[#ffb81c]">
+                    <h3 class="text-2xl font-bold mb-5 flex items-center gap-3"><span class="text-3xl">👥</span> S - Fatores Socioculturais</h3>
+                    <ul class="space-y-4">
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Demanda crescente do consumidor por rastreabilidade, sustentabilidade e práticas ESG.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Valorização de "cafés especiais" e de origem controlada, melhorando a percepção de qualidade do Conilon.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-emerald-500 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-emerald-700">Oportunidade:</strong> Valorização de "cafés especiais" e de origem controlada, melhorando a percepção de qualidade do Conilon.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Desafios de sucessão familiar no campo, podendo reduzir o número de cooperados e a área de produção a longo prazo.
+                            </div>
+                        </li>
+                         <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Rigor da sociedade e mídia com leis trabalhistas rurais; alto risco reputacional para todo o setor.
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="gemini-card-btn mt-4 w-full text-sm font-semibold py-2 px-4 rounded-md bg-[#004e38] text-white hover:bg-[#00744b] transition-all flex items-center justify-center gap-2">
+                        ✨ Gerar Recomendações
+                    </button>
+                    <div class="gemini-result-wrapper hidden mt-4">
+                      <div class="spinner-wrapper flex justify-center items-center h-24">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600 text-sm">Gerando...</p>
+                      </div>
+                      <div class="gemini-result prose prose-sm max-w-none p-4 bg-gray-50 rounded-md"></div>
+                    </div>
+                </div>
+
+                <!-- Tecnológico -->
+                <div class="pestel-card bg-white p-6 rounded-md shadow-md border-t-4 border-[#ffb81c]">
+                    <h3 class="text-2xl font-bold mb-5 flex items-center gap-3"><span class="text-3xl">💻</span> T - Fatores Tecnológicos</h3>
+                    <ul class="space-y-4">
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Adoção de agricultura de precisão (drones, sensores) e "agtechs" para otimizar o uso de insumos.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Novas tecnologias de irrigação (gotejamento, pivô digital) e gestão hídrica inteligente.
+                            </div>
+                        </li>
+                         <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Rastreabilidade via Blockchain para agregar valor e garantir autenticidade ao consumidor final.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-emerald-500 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-emerald-700">Oportunidade:</strong> Novas tecnologias de irrigação (gotejamento, pivô digital) e gestão hídrica inteligente.
+                            </div>
+                        </li>
+                         <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-emerald-500 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-emerald-700">Oportunidade:</strong> Rastreabilidade via Blockchain para agregar valor e garantir autenticidade ao consumidor final.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Custo de implementação de novas tecnologias pode ser uma barreira para pequenos produtores.
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="gemini-card-btn mt-4 w-full text-sm font-semibold py-2 px-4 rounded-md bg-[#004e38] text-white hover:bg-[#00744b] transition-all flex items-center justify-center gap-2">
+                        ✨ Gerar Recomendações
+                    </button>
+                    <div class="gemini-result-wrapper hidden mt-4">
+                      <div class="spinner-wrapper flex justify-center items-center h-24">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600 text-sm">Gerando...</p>
+                      </div>
+                      <div class="gemini-result prose prose-sm max-w-none p-4 bg-gray-50 rounded-md"></div>
+                    </div>
+                </div>
+
+                <!-- Ambiental (Ecológico) -->
+                <div class="pestel-card bg-white p-6 rounded-md shadow-md border-t-4 border-[#ffb81c]">
+                    <h3 class="text-2xl font-bold mb-5 flex items-center gap-3"><span class="text-3xl">🌿</span> E - Fatores Ambientais</h3>
+                    <ul class="space-y-4">
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça (Alta):</strong> Eventos climáticos extremos (secas prolongadas, chuvas intensas) afetando a produtividade da safra.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Escassez hídrica e aumento do custo de energia para irrigação, elevando o custo de produção.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Desenvolvimento do mercado de créditos de carbono (ex: "Carbono Cooabriel") como nova fonte de receita.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Demanda por práticas regenerativas e orgânicas, agregando valor ao produto e melhorando a saúde do solo.
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="gemini-card-btn mt-4 w-full text-sm font-semibold py-2 px-4 rounded-md bg-[#004e38] text-white hover:bg-[#00744b] transition-all flex items-center justify-center gap-2">
+                        ✨ Gerar Recomendações
+                    </button>
+                    <div class="gemini-result-wrapper hidden mt-4">
+                      <div class="spinner-wrapper flex justify-center items-center h-24">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600 text-sm">Gerando...</p>
+                      </div>
+                      <div class="gemini-result prose prose-sm max-w-none p-4 bg-gray-50 rounded-md"></div>
+                    </div>
+                </div>
+
+                <!-- Legal -->
+                <div class="pestel-card bg-white p-6 rounded-md shadow-md border-t-4 border-[#ffb81c]">
+                    <h3 class="text-2xl font-bold mb-5 flex items-center gap-3"><span class="text-3xl">⚖️</span> L - Fatores Legais</h3>
+                    <ul class="space-y-4">
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Necessidade de adequação às novas regras complexas da Reforma Tributária.
+                            </div>
+                        </li>
+                         <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Rigor crescente na legislação ambiental (Código Florestal) e restrições ao uso de defensivos agrícolas.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="oportunidade">
+                            <span class="text-green-600 text-2xl font-bold flex-shrink-0">▲</span>
+                            <div>
+                                <strong class="text-green-700">Oportunidade:</strong> Adoção de certificações (Rainforest, Fair Trade) como diferencial competitivo e acesso a mercados.
+                            </div>
+                        </li>
+                        <li class="pestel-item flex gap-3 items-start" data-type="ameaca">
+                            <span class="text-red-500 text-2xl font-bold flex-shrink-0">▼</span>
+                            <div>
+                                <strong class="text-red-700">Ameaça:</strong> Leis trabalhistas complexas e de alto custo (passivo) para o produtor rural.
+                            </div>
+                        </li>
+                    </ul>
+                    <button class="gemini-card-btn mt-4 w-full text-sm font-semibold py-2 px-4 rounded-md bg-[#004e38] text-white hover:bg-[#00744b] transition-all flex items-center justify-center gap-2">
+                        ✨ Gerar Recomendações
+                    </button>
+                    <div class="gemini-result-wrapper hidden mt-4">
+                      <div class="spinner-wrapper flex justify-center items-center h-24">
+                        <div class="spinner"></div>
+                        <p class="ml-4 text-gray-600 text-sm">Gerando...</p>
+                      </div>
+                      <div class="gemini-result prose prose-sm max-w-none p-4 bg-gray-50 rounded-md"></div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-8 mt-12 border-t border-gray-200">
+        <p class="text-sm text-gray-500">Relatório Interativo PESTEL 2026. Esta é uma análise simulada para fins de demonstração.</p>
+    </footer>
+
+    <!-- Gemini Modal -->
+    <div id="gemini-modal" class="modal hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity p-4">
+      <div class="bg-white rounded-md shadow-xl max-w-2xl w-full m-4 overflow-hidden">
+        <div class="flex justify-between items-center p-4 border-b">
+          <h3 class="text-2xl font-bold text-[#004e38]">✨ Resumo Executivo (IA)</h3>
+          <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+        </div>
+        <div id="modal-content-wrapper" class="p-6 max-h-[70vh] overflow-y-auto">
+          <div id="modal-spinner" class="spinner-wrapper hidden justify-center items-center h-32">
+            <div class="spinner"></div>
+            <p class="ml-4 text-gray-600">Gerando resumo... Por favor, aguarde.</p>
+          </div>
+          <div id="modal-content" class="prose max-w-none"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            const summaryData = {
+                oportunidades: 11,
+                ameacas: 12
+            };
+
+            const ctx = document.getElementById('summaryChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Oportunidades', 'Ameaças'],
+                    datasets: [{
+                        label: 'Contagem de Fatores',
+                        data: [summaryData.oportunidades, summaryData.ameacas],
+                        backgroundColor: [
+                            '#004e38', /* Cooabriel Green */
+                            '#ef4444'
+                        ],
+                        borderColor: [
+                            '#ffffff',
+                            '#ffffff'
+                        ],
+                        borderWidth: 4,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                font: {
+                                    size: 14,
+                                    weight: '600',
+                                    family: "'Poppins', sans-serif"
+                                },
+                                color: '#4d4d4d'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const filterButtons = document.querySelectorAll('#filters .filter-btn');
+            const pestelItems = document.querySelectorAll('.pestel-item');
+
+            // --- Lógica de Filtro Otimizada ---
+            const inactiveClasses = {
+                'todos': 'bg-white text-[#004e38] border border-[#004e38]',
+                'oportunidade': 'bg-white text-green-700 border border-green-700',
+                'ameaca': 'bg-white text-red-700 border border-red-700'
+            };
+            const activeClasses = {
+                'todos': 'bg-[#004e38] text-white',
+                'oportunidade': 'bg-green-700 text-white',
+                'ameaca': 'bg-red-700 text-white'
+            };
+            const baseButtonClasses = 'filter-btn font-semibold py-3 px-6 rounded-md shadow-md';
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const filter = button.dataset.filter;
+
+                    // Resetar todos os botões
+                    filterButtons.forEach(btn => {
+                        const type = btn.dataset.filter;
+                        btn.className = `${baseButtonClasses} ${inactiveClasses[type]}`;
+                    });
+
+                    // Ativar o botão clicado
+                    button.className = `${baseButtonClasses} active ${activeClasses[filter]}`;
+                    
+                    // Filtrar os itens
+                    pestelItems.forEach(item => {
+                        if (filter === 'todos' || item.dataset.type === filter) {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+            
+            // Estado inicial
+            filterButtons[0].click(); 
+            // --- Fim da Lógica de Filtro ---
+
+            // --- Gemini API ---
+            const modal = document.getElementById('gemini-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const summaryBtn = document.getElementById('generate-summary-btn');
+            const modalContent = document.getElementById('modal-content');
+            const modalSpinner = document.getElementById('modal-spinner');
+            const cardButtons = document.querySelectorAll('.gemini-card-btn');
+
+            const apiKey = ""; // Deixe em branco, será tratado pelo ambiente
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            function formatGeminiResponse(text) {
+                return text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/^- (.*?)(\n|$)/gm, '<li class="ml-4 list-disc">$1</li>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/<br>(<li)/g, '$1')
+                    .replace(/(<\/li>)<br>/g, '$1');
+            }
+
+            async function callGemini(prompt, resultEl, spinnerEl) {
+                spinnerEl.classList.remove('hidden');
+                spinnerEl.style.display = 'flex';
+                if (resultEl) resultEl.innerHTML = '';
+
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                let retries = 3;
+                let delay = 1000;
+
+                while (retries > 0) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                        if (text) {
+                            if (resultEl) resultEl.innerHTML = formatGeminiResponse(text);
+                        } else {
+                            throw new Error('Resposta da IA inválida.');
+                        }
+                        
+                        spinnerEl.classList.add('hidden');
+                        return; // Success
+
+                    } catch (error) {
+                        retries--;
+                        if (retries === 0) {
+                            const errorMsg = 'Não foi possível gerar a resposta. Tente novamente mais tarde.';
+                            if (resultEl) resultEl.innerHTML = `<p class="text-red-600">${errorMsg}</p>`;
+                            spinnerEl.classList.add('hidden');
+                        } else {
+                            await new Promise(res => setTimeout(res, delay));
+                            delay *= 2;
+                        }
+                    }
+                }
+            }
+
+            // Modal: Resumo Executivo
+            summaryBtn.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                
+                const opportunities = Array.from(document.querySelectorAll('.pestel-item[data-type="oportunidade"]'))
+                                          .map(item => item.querySelector('div').innerText.replace('Oportunidade:', '').trim());
+                const threats = Array.from(document.querySelectorAll('.pestel-item[data-type="ameaca"]'))
+                                     .map(item => item.querySelector('div').innerText.replace('Ameaça:', '').trim());
+
+                const prompt = `
+                    Você é um consultor de estratégia sênior especializado no agronegócio brasileiro, especificamente no setor de café.
+                    Analise os seguintes fatores PESTEL para a cooperativa Cooabriel em 2026.
+                    
+                    Oportunidades Identificadas:
+                    - ${opportunities.join('\n- ')}
+                    
+                    Ameaças Identificadas:
+                    - ${threats.join('\n- ')}
+                    
+                    Gere um resumo executivo (2-3 parágrafos) que:
+                    1. Destaque os 3 riscos mais críticos que exigem atenção imediata.
+                    2. Identifique as 3 oportunidades mais promissoras que a cooperativa deve priorizar.
+                    3. Forneça uma conclusão estratégica geral sobre como a Cooabriel deve se posicionar em 2026.
+                    
+                    Formate a resposta de forma clara e profissional.
+                `;
+
+                callGemini(prompt, modalContent, modalSpinner);
+            });
+
+            closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+
+            // Botões por Card: Recomendações
+            cardButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const card = button.closest('.pestel-card');
+                    const cardTitle = card.querySelector('h3').innerText.split(' - ')[1] || 'Fatores';
+                    const resultWrapper = card.querySelector('.gemini-result-wrapper');
+                    const resultEl = resultWrapper.querySelector('.gemini-result');
+                    const spinner = resultWrapper.querySelector('.spinner-wrapper');
+
+                    resultWrapper.classList.remove('hidden');
+
+                    const opportunities = Array.from(card.querySelectorAll('.pestel-item[data-type="oportunidade"]'))
+                                              .map(item => item.querySelector('div').innerText.replace('Oportunidade:', '').trim());
+                    const threats = Array.from(card.querySelectorAll('.pestel-item[data-type="ameaca"]'))
+                                         .map(item => item.querySelector('div').innerText.replace('Ameaça:', '').trim());
+
+                    const prompt = `
+                        Você é um consultor de estratégia focado no agronegócio (cooperativas de café).
+                        Para os ${cardTitle} listados abaixo:
+                        
+                        Oportunidades:
+                        - ${opportunities.join('\n- ') || 'Nenhuma'}
+                        
+                        Ameaças:
+                        - ${threats.join('\n- ') || 'Nenhuma'}
+                        
+                        Gere 2-3 recomendações estratégicas curtas e acionáveis que a Cooabriel pode implementar para mitigar os riscos e/ou capitalizar as oportunidades deste fator específico.
+                        Seja direto e focado em ações.
+                    `;
+                    
+                    callGemini(prompt, resultEl, spinner);
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
+
+
