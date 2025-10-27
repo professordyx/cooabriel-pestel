@@ -538,7 +538,7 @@
             const modalSpinner = document.getElementById('modal-spinner');
             const cardButtons = document.querySelectorAll('.gemini-card-btn');
 
-            const apiKey = ""; // Deixe em branco, será tratado pelo ambiente
+            const apiKey = "AIzaSyC3Zpp_97d8EubTr9cRghOCPSIK7fTI-t4"; // Deixe em branco, será tratado pelo ambiente
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             function formatGeminiResponse(text) {
